@@ -1,0 +1,19 @@
+# Node
+frontend/node_modules
+frontend/build
+frontend/coverage
+
+# Python
+backend/.venv
+backend/__pycache__
+backend/.pytest_cache
+**/*.pyc
+
+# Env
+.env
+*.env
+
+# IDE
+.vscode
+.idea
+.DS_Store
