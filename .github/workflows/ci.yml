@@ -9,9 +9,6 @@ on:
       - main
 
 jobs:
-  # ──────────────────────────────────────────────
-  # JOB 1: Frontend — install, test, build
-  # ──────────────────────────────────────────────
   frontend:
     name: Frontend (Node 20)
     runs-on: ubuntu-latest
@@ -32,7 +29,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Run frontend unit tests (with coverage)
         run: npx react-scripts test --coverage --watchAll=false --ci
@@ -42,7 +39,7 @@ jobs:
       - name: Build frontend artifact
         run: npm run build
         env:
-          CI: false   # Prevents treating warnings as errors during build
+          CI: false
 
       - name: Upload frontend coverage report
         uses: actions/upload-artifact@v4
@@ -51,9 +48,6 @@ jobs:
           path: frontend/coverage/lcov.info
           retention-days: 1
 
-  # ──────────────────────────────────────────────
-  # JOB 2: Backend — install, test, compile-check
-  # ──────────────────────────────────────────────
   backend:
     name: Backend (Python 3.12)
     runs-on: ubuntu-latest
@@ -78,11 +72,8 @@ jobs:
       - name: Compile-check backend (artifact sanity)
         run: python -m compileall backend
 
-  # ──────────────────────────────────────────────
-  # JOB 3: SonarCloud scan
-  # ──────────────────────────────────────────────
   sonar:
-    name: SonarCloud Analysis
+    name: SonarQube Cloud Analysis
     runs-on: ubuntu-latest
     needs: [frontend, backend]
 
@@ -90,7 +81,7 @@ jobs:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0   # Shallow clones break SonarCloud blame data
+          fetch-depth: 0
 
       - name: Download frontend coverage
         uses: actions/download-artifact@v4
@@ -98,22 +89,25 @@ jobs:
           name: frontend-coverage
           path: frontend/coverage
 
-    - name: SonarQube Cloud Scan
-  uses: SonarSource/sonarqube-scan-action@v4
-  env:
-    SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
-    GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-  with:
-    args: >
-      -Dsonar.host.url=https://sonarcloud.io
-  # ──────────────────────────────────────────────
-  # JOB 4: Build & push Docker image to Docker Hub
-  # ──────────────────────────────────────────────
+      - name: SonarQube Cloud Scan
+        uses: SonarSource/sonarqube-scan-action@v4
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          args: >
+            -Dsonar.host.url=https://sonarcloud.io
+            -Dsonar.organization=sam18-bot
+            -Dsonar.projectKey=SAM18-Bot_insightflow
+            -Dsonar.sources=frontend/src,backend
+            -Dsonar.tests=frontend/src,backend/tests
+            -Dsonar.javascript.lcov.reportPaths=frontend/coverage/lcov.info
+            -Dsonar.python.version=3.12
+
   docker:
     name: Docker Build & Push
     runs-on: ubuntu-latest
     needs: [frontend, backend]
-    # Only push on direct pushes to main (not on PRs)
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     steps:
@@ -148,9 +142,6 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ──────────────────────────────────────────────
-  # JOB 5: Trigger Render backend deploy
-  # ──────────────────────────────────────────────
   deploy-backend:
     name: Deploy Backend (Render)
     runs-on: ubuntu-latest
@@ -162,14 +153,10 @@ jobs:
         run: |
           curl -fsSL -X POST "${{ secrets.RENDER_DEPLOY_HOOK_URL }}"
 
-  # ──────────────────────────────────────────────
-  # JOB 6: Deploy frontend to Netlify
-  # ──────────────────────────────────────────────
   deploy-frontend:
     name: Deploy Frontend (Netlify)
     runs-on: ubuntu-latest
     needs: [frontend]
-    # secrets context is not available in `if:` expressions — guard is done inside the step below
     if: github.event_name == 'push' && github.ref == 'refs/heads/main'
 
     defaults:
@@ -188,7 +175,7 @@ jobs:
           cache-dependency-path: frontend/package-lock.json
 
       - name: Install dependencies
-        run: npm install --no-audit --no-fund
+        run: npm ci --no-audit --no-fund
 
       - name: Build frontend
         run: npm run build
