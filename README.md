@@ -147,14 +147,7 @@ Frontend (`frontend/.env.example`):
 
 ## 🔗 Live URLs
 
-- Frontend (Netlify): `https://your-netlify-site.netlify.app`
-- Backend (Render): `https://your-render-backend.onrender.com`
-- Docker Hub: `https://hub.docker.com/r/<docker-username>/insightflow`
+- Frontend (Netlify): `https://insightflow1.netlify.app/`
+- Backend (Render): `https://lab-10-3r2m.onrender.com`
+- Docker Hub: `https://hub.docker.com/repository/docker/samo18/insightflow`
 
-## 🖼️ Screenshots
-
-Add deployed UI screenshots here:
-
-- `docs/screenshots/dashboard.png`
-- `docs/screenshots/upload-flow.png`
-- `docs/screenshots/filter-results.png`
